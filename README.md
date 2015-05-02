@@ -1,4 +1,4 @@
-# t3ext-tikafal
+# TYPO3 extesnion: tikafal
 Extract metadata from files using Apache Tika
 
 ## Requirements
