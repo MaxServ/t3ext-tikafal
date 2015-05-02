@@ -29,5 +29,5 @@ Or install it using composer:
 
 ## Configuration
 
-1 Configure the extension in the extension manager. Specify the absolute path to the tika jar file. There is a fairly recent one in the Resources/Public/Java folder.
-2 Tweak the fieldmapping in TypoScript under the key: `module.tx_tikafal.settings.fieldmap`.
+1. Configure the extension in the extension manager. Specify the absolute path to the tika jar file. There is a fairly recent one in the Resources/Public/Java folder.
+2. Tweak the fieldmapping in TypoScript under the key: `module.tx_tikafal.settings.fieldmap`.
