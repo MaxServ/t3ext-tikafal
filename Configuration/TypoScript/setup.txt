@@ -1,0 +1,17 @@
+module {
+	tx_tikafal {
+		settings {
+			fieldmap {
+				content_creation_date = Creation-Date, dcterms:created, meta:creation-date
+				content_modification_date = Last-Modified, dcterms:modified, modified
+				creator = creator, dc:creator, meta:author, Author
+				creator_tool = PTEX.Fullbanner, xmp:CreatorTool
+				description = dc:subject, subject
+				keywords = meta:keyword
+				pages = xmpTPg:NPages
+				publisher = producer,
+				title = dc:title, title
+			}
+		}
+	}
+}

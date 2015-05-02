@@ -1,0 +1,21 @@
+{
+  "name": "maxserv/tikafal",
+  "type": "typo3-cms-extension",
+  "description": "Extract metadata from files using Apache Tika",
+  "homepage": "https://github.com/MaxServ/t3ext-tikafal",
+  "license": ["GPL-2.0+"],
+  "keywords": [
+    "TYPO3 CMS",
+    "Tika",
+    "FAL",
+    "Metadata",
+    "cli"
+  ],
+  "support": {
+    "issues": "https://github.com/MaxServ/t3ext-tikafal/issues"
+  },
+  "version": "1.0.0",
+  "require": {
+    "typo3/cms-core": ">=6.2.6,<8.0"
+  }
+}
