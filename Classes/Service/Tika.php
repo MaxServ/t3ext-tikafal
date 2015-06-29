@@ -25,6 +25,7 @@ namespace MaxServ\Tikafal\Service;
 
 use TYPO3\CMS\Core\Resource;
 use TYPO3\CMS\Core\Utility\CommandUtility;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 
@@ -1598,6 +1599,9 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 		$this->fieldmap = $this->settings['fieldmap.'];
 
 		$this->configuration = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf'][$this->extKey]);
+		if (!$this->configuration['tikaPath']) {
+			$this->configuration['tikaPath'] = ExtensionManagementUtility::extPath('tikafal') . 'Resources/Public/Java/tika-app-1.8.jar';
+		}
 		if ($this->configuration['extractor'] == 'tika' && !is_file(GeneralUtility::getFileAbsFileName($this->configuration['tikaPath'], FALSE))) {
 			throw new \RuntimeException(
 				'Invalid path or filename for Tika application jar.',
