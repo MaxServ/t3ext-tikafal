@@ -1743,10 +1743,10 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 			'file' => $file,
 			'tika command' => $tikaCommand,
 			'shell output' => json_decode($shellOutput, TRUE),
-			'mappedMetadataFields' => $this->mapMetadataFields(json_decode($shellOutput, TRUE))
+			'mappedMetadataFields' => $this->mapMetadataFields((array)json_decode($shellOutput, TRUE))
 		));
 
-		return $this->mapMetadataFields(json_decode($shellOutput, TRUE));
+		return $this->mapMetadataFields((array)json_decode($shellOutput, TRUE));
 	}
 
 	/**
