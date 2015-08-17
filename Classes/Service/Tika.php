@@ -30,8 +30,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 
 /**
- * This is a bridge service between TYPO3 metadata extraction services
- * and FAL extractors for Local Driver.
+ * This is a metadata extraction service for a FAL Local Driver.
  *
  * @category    Service
  * @package     TYPO3
@@ -1597,6 +1596,9 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 		$allTypoScript = $this->configurationManager->getConfiguration(\TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::CONFIGURATION_TYPE_FULL_TYPOSCRIPT);
 		$this->settings = $allTypoScript['module.']['tx_tikafal.']['settings.'];
 		$this->fieldmap = $this->settings['fieldmap.'];
+		foreach ($this->fieldmap as $key => $value) {
+			$this->fieldmap[$key] = explode(',', str_replace(' ', '', $value));
+		}
 
 		$this->configuration = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf'][$this->extKey]);
 		if (!$this->configuration['tikaPath']) {
@@ -1678,14 +1680,15 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	 * The actual processing TASK.
 	 *
 	 * Should return an array with database properties for sys_file_metadata to
-	 * write
+	 * write. Existing data has precedence over new information except if value
+	 * is empty.
 	 *
 	 * @param Resource\File $file A file resource
-	 * @param array $previousExtractedData Array of already extracted data
+	 * @param array $metadata Array of already extracted data
 	 *
 	 * @return array
 	 */
-	public function extractMetaData(Resource\File $file, array $previousExtractedData = array()) {
+	public function extractMetaData(Resource\File $file, array $metadata = array()) {
 		$fileName = $file->getForLocalProcessing(FALSE);
 
 		if ($this->configuration['extractor'] == 'solr') {
@@ -1695,15 +1698,17 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 			$data['alternative'] = $this->extractTextUsingTika($fileName);
 		}
 
-		// Existing data has precedence over new information
-		$metadata = array_merge($data, $previousExtractedData);
+		foreach ($data as $key => $value) {
+			if (!array_key_exists($key, $metadata) || $metadata[$key] === '') {
+				$metadata[$key] = $value;
+			}
+		}
 
-//		// Extract language
-//		$languageMetatada = $this->getLanguage($file);
-//		if (!empty($languageMetatada)) {
-//			// Existing data has precedence over new information
-//			$metadata = array_merge($languageMetatada, $metadata);
-//		}
+		$this->log('Metadata Extraction', array(
+			'file' => $file->getIdentifier(),
+			'extractedData' => $data,
+			'metadata' => $metadata
+		));
 
 		return $metadata;
 	}
@@ -1713,7 +1718,7 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	 *
 	 * @param string $file Absolute path to the file to extract metadata from.
 	 *
-	 * @return string Metadata extracted from the given file.
+	 * @return array Metadata extracted from the given file.
 	 */
 	protected function extractMetadataUsingTika($file) {
 
@@ -1737,7 +1742,8 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 		$this->log('Text Extraction using local Tika', array(
 			'file' => $file,
 			'tika command' => $tikaCommand,
-			'shell output' => $shellOutput
+			'shell output' => json_decode($shellOutput, TRUE),
+			'mappedMetadataFields' => $this->mapMetadataFields(json_decode($shellOutput, TRUE))
 		));
 
 		return $this->mapMetadataFields(json_decode($shellOutput, TRUE));
@@ -1783,7 +1789,7 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	 *
 	 * @param string $file Absolute path to the file to extract content from.
 	 *
-	 * @return string Content extracted from the given file.
+	 * @return array Content extracted from the given file.
 	 */
 	protected function extractUsingSolr($file) {
 		// FIXME move connection building to EXT:solr
@@ -1820,11 +1826,10 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	 *
 	 * @return array
 	 */
-	protected function mapMetadataFields($fields) {
+	protected function mapMetadataFields(array $fields) {
 		$mappedFields = array();
 		foreach ($this->fieldmap as $key => $value) {
 			$mappedFields[$key] = '';
-			$this->fieldmap[$key] = explode(',', str_replace(' ', '', $value));
 		}
 
 		foreach ($fields as $fieldName => $fieldValue) {
@@ -1845,31 +1850,6 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	}
 
 	/**
-	 * Debugs the output of a given service.
-	 *
-	 * @param string $serviceKey
-	 * @param string $serviceSubType
-	 * @param string $fileName
-	 * @param array $output
-	 *
-	 * @return void
-	 */
-	protected function debugServiceOutput($serviceKey, $serviceSubType, $fileName, array $output) {
-		$logPath = GeneralUtility::getFileAbsFileName('typo3temp/tx_tikafal/');
-		GeneralUtility::mkdir_deep($logPath);
-		$logFilename = date('Ymd-His-') . GeneralUtility::shortMD5($fileName) . '-' . GeneralUtility::shortMD5($serviceKey . $serviceSubType) . '.log';
-
-		$content = array();
-		$content[] = 'File:    ' . $fileName;
-		$content[] = 'Service: ' . $serviceKey;
-		$content[] = 'Subtype: ' . $serviceSubType;
-		$content[] = 'Output:';
-		$content[] = var_export($output, TRUE);
-
-		@file_put_contents($logPath . $logFilename, implode(LF, $content));
-	}
-
-	/**
 	 * Logs a message and optionally data to devlog
 	 *
 	 * @param string $message Log message
@@ -1878,11 +1858,9 @@ class Tika implements \TYPO3\CMS\Core\Resource\Index\ExtractorInterface {
 	 * @return void
 	 */
 	protected function log($message, array $data = array()) {
-		if (!$this->configuration['logging']) {
-			return;
+		if ($this->configuration['debug'] || $this->settings['logging']) {
+			GeneralUtility::devLog($message, 'tika', 0, $data);
 		}
-
-		GeneralUtility::devLog($message, 'tika', 0, $data);
 	}
 
 }
