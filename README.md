@@ -2,29 +2,20 @@
 Extract metadata from files using Apache Tika
 
 ## Requirements
-
 You will need a java executable if you want to use the Tika jar file.
 
 ## Installation
-
 Clone it
+
 ```bash
 git clone https://github.com/MaxServ/t3ext-tikafal.git tikafal
 ```
 
 Or install it using composer:
-```json
-{
-    "repositories": [
-        {
-            "type": "git",
-            "url": "https://github.com/MaxServ/t3ext-tikafal.git"
-        }
-    ],
-    "require": {
-        "maxserv/tikafal": "*"
-    }
-}
+
+```bash
+composer config repositories.tikafal vcs https://github.com/MaxServ/t3ext-tikafal.git
+composer require maxserv/tikafal
 ```
 
 ## Configuration

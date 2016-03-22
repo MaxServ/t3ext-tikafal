@@ -4,7 +4,7 @@ namespace MaxServ\Tikafal\Hook;
 /**
  *  Copyright notice
  *
- *  ⓒ 2015 Michiel Roos <michiel@maxserv.com>
+ *  ⓒ 2016 ⊰ ℳichiel ℛoos ⊱ <michiel@maxserv.com>
  *  All rights reserved
  *
  *  This script is part of the TYPO3 project. The TYPO3 project is free
@@ -39,66 +39,67 @@ use TYPO3\CMS\Core\Utility\File\ExtendedFileUtilityProcessDataHookInterface;
  * @author      Michiel Roos <michiel@maxserv.com>
  * @license     http://www.gnu.org/copyleft/gpl.html
  */
-class FileUploadHook implements ExtendedFileUtilityProcessDataHookInterface {
+class FileUploadHook implements ExtendedFileUtilityProcessDataHookInterface
+{
+    /**
+     * @var \TYPO3\CMS\Core\Resource\Index\ExtractorInterface[]
+     */
+    static protected $extractionServices;
 
-	/**
-	 * @var \TYPO3\CMS\Core\Resource\Index\ExtractorInterface[]
-	 */
-	static protected $extractionServices = NULL;
+    /**
+     * @param string $action The action
+     * @param array $cmdArr The parameter sent to the action handler
+     * @param array $result The results of all calls to the action handler
+     * @param ExtendedFileUtility $pObj The parent object
+     * @return void
+     */
+    public function processData_postProcessAction($action, array $cmdArr, array $result, ExtendedFileUtility $pObj)
+    {
+        if ($action === 'upload') {
+            /** @var File[] $fileObjects */
+            $fileObjects = array_pop($result);
+            if (!is_array($fileObjects)) {
+                return;
+            }
 
-	/**
-	 * @param string $action The action
-	 * @param array $cmdArr The parameter sent to the action handler
-	 * @param array $result The results of all calls to the action handler
-	 * @param ExtendedFileUtility $pObj The parent object
-	 * @return void
-	 */
-	public function processData_postProcessAction($action, array $cmdArr, array $result, ExtendedFileUtility $pObj) {
-		if ($action === 'upload') {
-			/** @var File[] $fileObjects */
-			$fileObjects = array_pop($result);
-			if (!is_array($fileObjects)) {
-				return;
-			}
+            foreach ($fileObjects as $fileObject) {
+                $storageRecord = $fileObject->getStorage()->getStorageRecord();
+                if ($storageRecord['driver'] === 'Local') {
+                    $this->runMetaDataExtraction($fileObject);
+                }
+            }
+        }
+    }
 
-			foreach ($fileObjects as $fileObject) {
-				$storageRecord = $fileObject->getStorage()->getStorageRecord();
-				if ($storageRecord['driver'] === 'Local') {
-					$this->runMetaDataExtraction($fileObject);
-				}
-			}
-		}
-	}
+    /**
+     * Runs the metadata extraction for a given file.
+     *
+     * @param File $fileObject
+     * @return void
+     * @see \TYPO3\CMS\Core\Resource\Index\Indexer::runMetaDataExtraction
+     */
+    protected function runMetaDataExtraction(File $fileObject)
+    {
+        if (static::$extractionServices === NULL) {
+            $extractorRegistry = ExtractorRegistry::getInstance();
+            static::$extractionServices = $extractorRegistry->getExtractorsWithDriverSupport('Local');
+        }
 
-	/**
-	 * Runs the metadata extraction for a given file.
-	 *
-	 * @param File $fileObject
-	 * @return void
-	 * @see \TYPO3\CMS\Core\Resource\Index\Indexer::runMetaDataExtraction
-	 */
-	protected function runMetaDataExtraction(File $fileObject) {
-		if (static::$extractionServices === NULL) {
-			$extractorRegistry = ExtractorRegistry::getInstance();
-			static::$extractionServices = $extractorRegistry->getExtractorsWithDriverSupport('Local');
-		}
-
-		$newMetaData = array(
-			0 => $fileObject->_getMetaData()
-		);
-		foreach (static::$extractionServices as $service) {
-			if ($service->canProcess($fileObject)) {
-				$newMetaData[$service->getPriority()] = $service->extractMetaData($fileObject, $newMetaData);
-			}
-		}
-		ksort($newMetaData);
-		$metaData = array();
-		foreach ($newMetaData as $data) {
-			$metaData = array_merge($metaData, $data);
-		}
-		$fileObject->_updateMetaDataProperties($metaData);
-		$metaDataRepository = MetaDataRepository::getInstance();
-		$metaDataRepository->update($fileObject->getUid(), $metaData);
-	}
-
+        $newMetaData = array(
+            0 => $fileObject->_getMetaData()
+        );
+        foreach (static::$extractionServices as $service) {
+            if ($service->canProcess($fileObject)) {
+                $newMetaData[$service->getPriority()] = $service->extractMetaData($fileObject, $newMetaData);
+            }
+        }
+        ksort($newMetaData);
+        $metaData = array();
+        foreach ($newMetaData as $data) {
+            $metaData = array_merge($metaData, $data);
+        }
+        $fileObject->_updateMetaDataProperties($metaData);
+        $metaDataRepository = MetaDataRepository::getInstance();
+        $metaDataRepository->update($fileObject->getUid(), $metaData);
+    }
 }
